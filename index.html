@@ -13,7 +13,6 @@
       --muted: rgba(20,20,20,0.7);
       --card: rgba(255, 255, 255, 0.78);
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -28,7 +27,6 @@
       overflow: hidden;
     }
 
-    /* Fondo animado OPTIMIZADO */
     .bg-emojis {
       position: fixed;
       inset: 0;
@@ -36,7 +34,6 @@
       z-index: 0;
       overflow: hidden;
     }
-
     .emoji {
       position: absolute;
       bottom: -60px;
@@ -44,7 +41,6 @@
       will-change: transform, opacity;
       animation: floatUp linear infinite;
     }
-
     @keyframes floatUp {
       0%   { transform: translateY(0); opacity: 0; }
       10%  { opacity: 0.7; }
@@ -65,21 +61,14 @@
     }
 
     h1 { font-size: 1.7rem; margin-bottom: 6px; }
-
-    .subtitle {
-      font-size: 0.9rem;
-      color: var(--muted);
-      margin-bottom: 18px;
-    }
+    .subtitle { font-size: 0.9rem; color: var(--muted); margin-bottom: 18px; }
 
     .countdown {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
     }
-    @media (min-width: 480px) {
-      .countdown { grid-template-columns: repeat(4, 1fr); }
-    }
+    @media (min-width: 480px) { .countdown { grid-template-columns: repeat(4, 1fr); } }
 
     .unit {
       background: rgba(255,255,255,0.6);
@@ -87,7 +76,6 @@
       padding: 12px 8px;
       text-align: center;
     }
-
     .value { font-size: 1.8rem; font-weight: 700; }
     .label {
       font-size: 0.7rem;
@@ -96,12 +84,7 @@
       color: var(--muted);
     }
 
-    .row {
-      display: flex;
-      justify-content: center;
-      margin-top: 14px;
-    }
-
+    .row { display: flex; justify-content: center; margin-top: 14px; }
     button {
       border: 0;
       padding: 10px 14px;
@@ -164,30 +147,21 @@
   <script>
     const targetDate = new Date("2026-01-06T00:00:00").getTime();
 
-    // 🔥 FONDO OPTIMIZADO
+    // Fondo optimizado
     const bg = document.getElementById("bgEmojis");
     const EMOJIS = ["❤️", "💘", "🐽", "💝"];
-    const COUNT = 28; // 👈 fluido
-
-    function rand(min, max) {
-      return Math.random() * (max - min) + min;
-    }
+    function rand(min, max) { return Math.random() * (max - min) + min; }
 
     function spawnEmoji() {
       const el = document.createElement("div");
       el.className = "emoji";
       el.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-
       el.style.left = rand(0, 100) + "%";
       el.style.fontSize = rand(22, 40) + "px";
       el.style.animationDuration = rand(8, 14) + "s";
-
       bg.appendChild(el);
-
       setTimeout(() => el.remove(), 15000);
     }
-
-    // crear en oleadas (MUCHO más fluido)
     setInterval(spawnEmoji, 600);
 
     // Contador
@@ -196,10 +170,9 @@
     const mm = document.getElementById("minutes");
     const ss = document.getElementById("seconds");
     const finalMsg = document.getElementById("finalMsg");
-
     function pad(n) { return n < 10 ? "0" + n : String(n); }
 
-    // Sonido
+    // Sonido ON/OFF (sin reproducir el mp3 al activar)
     const btn = document.getElementById("enableSound");
     const statusEl = document.getElementById("status");
     const song = document.getElementById("song");
@@ -209,23 +182,39 @@
 
     let soundEnabled = false;
     let finished = false;
+    let audioUnlocked = false;
+
+    async function unlockAudio() {
+      if (audioUnlocked) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.00001; // inaudible
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.02);
+        await ctx.resume();
+        audioUnlocked = true;
+      } catch (e) {
+        // si falla, no pasa nada; igualmente probaremos a reproducir al final
+      }
+    }
 
     btn.addEventListener("click", async () => {
       if (!soundEnabled) {
-        try {
-          await song.play();
-          song.pause();
-          song.currentTime = 0;
-          soundEnabled = true;
-          btn.textContent = "🔊 Música activadaaa";
-          statusEl.textContent = statusOnText;
-        } catch (e) {
-          statusEl.textContent = "No se pudo activar el sonido 😢";
-        }
+        soundEnabled = true;
+        btn.textContent = "🔊 Música activadaaa";
+        statusEl.textContent = statusOnText;
+        await unlockAudio();
+        // IMPORTANTE: aquí NO hacemos song.play()
       } else {
         soundEnabled = false;
         btn.textContent = "🔊 Activar sonido";
         statusEl.textContent = statusOffText;
+        try { song.pause(); song.currentTime = 0; } catch (e) {}
       }
     });
 
@@ -237,10 +226,14 @@
         d.textContent = hh.textContent = mm.textContent = ss.textContent = "00";
         finalMsg.style.display = "block";
 
-        if (!finished && soundEnabled) {
+        if (!finished) {
           finished = true;
-          song.currentTime = 0;
-          song.play().catch(() => {});
+          if (soundEnabled) {
+            song.currentTime = 0;
+            song.play().catch(() => {
+              statusEl.textContent = "La música no se pudo reproducir 😢 (prueba a tocar la pantalla y darle a activar).";
+            });
+          }
         }
         return;
       }
