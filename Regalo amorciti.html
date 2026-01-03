@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cuenta atrás ❤️</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #ffd1e6;
+      --bg2: #ffb6d5;
+      --accent: #ff4b81;
+      --accent-soft: #ff9bb5;
+      --text: #1a1a1a;
+      --muted: rgba(20,20,20,0.7);
+      --card: rgba(255, 255, 255, 0.78);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, var(--bg), var(--bg2) 60%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    /* Corazones */
+    .hearts {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .heart-emoji {
+      position: absolute;
+      user-select: none;
+      animation: floaty 6s ease-in-out infinite;
+    }
+
+    @keyframes floaty {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      width: 100%;
+      background: var(--card);
+      border-radius: 24px;
+      padding: 28px 22px 24px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      font-size: 1.7rem;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .countdown {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    @media (min-width: 480px) {
+      .countdown {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .unit {
+      background: rgba(255,255,255,0.6);
+      border-radius: 18px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .value {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    .row {
+      display: flex;
+      justify-content: center;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 800;
+      background: #ff4d7d;
+      color: white;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .final {
+      display: none;
+      margin-top: 14px;
+      text-align: center;
+      font-weight: 900;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hearts" id="hearts"></div>
+
+  <div class="container">
+    <h1>Tiempo hasta...</h1>
+    <p class="subtitle">
+      Esta cuenta atrás está hecha para que vayas viendo cuántos días quedan para la sorpresita que te tengo jiji.
+    </p>
+
+    <div class="countdown">
+      <div class="unit"><div class="value" id="days">–</div><div class="label">Días</div></div>
+      <div class="unit"><div class="value" id="hours">–</div><div class="label">Horas</div></div>
+      <div class="unit"><div class="value" id="minutes">–</div><div class="label">Minutos</div></div>
+      <div class="unit"><div class="value" id="seconds">–</div><div class="label">Segundos</div></div>
+    </div>
+
+    <div class="row">
+      <button id="enableSound">🔊 Activar sonido</button>
+    </div>
+
+    <div class="status" id="status">
+      Activa el sonido, y cuando llegue a 0 tendrás una sorpresita jijij
+    </div>
+
+    <div class="final" id="finalMsg">¡¡Llegó el momento!! ❤️</div>
+
+    <audio id="song">
+      <source src="media-luna.mp3" type="audio/mpeg">
+    </audio>
+  </div>
+
+  <script>
+    const targetDate = new Date("2026-01-06T00:00:00").getTime();
+
+    const heartsEl = document.getElementById("hearts");
+    for (let i = 0; i < 80; i++) {
+      const h = document.createElement("div");
+      h.className = "heart-emoji";
+      h.textContent = "❤️";
+      h.style.left = Math.random() * 100 + "%";
+      h.style.top = Math.random() * 100 + "%";
+      h.style.fontSize = (14 + Math.random() * 24) + "px";
+      h.style.opacity = 0.4 + Math.random() * 0.5;
+      heartsEl.appendChild(h);
+    }
+
+    const d = document.getElementById("days");
+    const h = document.getElementById("hours");
+    const m = document.getElementById("minutes");
+    const s = document.getElementById("seconds");
+    const finalMsg = document.getElementById("finalMsg");
+
+    function pad(n) { return n < 10 ? "0" + n : n; }
+
+    function tick() {
+      const now = Date.now();
+      const diff = targetDate - now;
+
+      if (diff <= 0) {
+        d.textContent = h.textContent = m.textContent = s.textContent = "00";
+        finalMsg.style.display = "block";
+        return;
+      }
+
+      const t = Math.floor(diff / 1000);
+      d.textContent = pad(Math.floor(t / 86400));
+      h.textContent = pad(Math.floor(t % 86400 / 3600));
+      m.textContent = pad(Math.floor(t % 3600 / 60));
+      s.textContent = pad(t % 60);
+    }
+
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
+</html>
