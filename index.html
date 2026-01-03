@@ -9,8 +9,6 @@
     :root {
       --bg: #ffd1e6;
       --bg2: #ffb6d5;
-      --accent: #ff4b81;
-      --accent-soft: #ff9bb5;
       --text: #1a1a1a;
       --muted: rgba(20,20,20,0.7);
       --card: rgba(255, 255, 255, 0.78);
@@ -30,23 +28,28 @@
       overflow: hidden;
     }
 
-    /* Corazones */
-    .hearts {
+    /* Fondo animado OPTIMIZADO */
+    .bg-emojis {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 0;
+      overflow: hidden;
     }
 
-    .heart-emoji {
+    .emoji {
       position: absolute;
+      bottom: -60px;
       user-select: none;
-      animation: floaty 6s ease-in-out infinite;
+      will-change: transform, opacity;
+      animation: floatUp linear infinite;
     }
 
-    @keyframes floaty {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
+    @keyframes floatUp {
+      0%   { transform: translateY(0); opacity: 0; }
+      10%  { opacity: 0.7; }
+      90%  { opacity: 0.7; }
+      100% { transform: translateY(-900px); opacity: 0; }
     }
 
     .container {
@@ -61,10 +64,7 @@
       backdrop-filter: blur(10px);
     }
 
-    h1 {
-      font-size: 1.7rem;
-      margin-bottom: 6px;
-    }
+    h1 { font-size: 1.7rem; margin-bottom: 6px; }
 
     .subtitle {
       font-size: 0.9rem;
@@ -77,11 +77,8 @@
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
     }
-
     @media (min-width: 480px) {
-      .countdown {
-        grid-template-columns: repeat(4, 1fr);
-      }
+      .countdown { grid-template-columns: repeat(4, 1fr); }
     }
 
     .unit {
@@ -91,11 +88,7 @@
       text-align: center;
     }
 
-    .value {
-      font-size: 1.8rem;
-      font-weight: 700;
-    }
-
+    .value { font-size: 1.8rem; font-weight: 700; }
     .label {
       font-size: 0.7rem;
       text-transform: uppercase;
@@ -124,6 +117,7 @@
       margin-top: 8px;
       font-size: 13px;
       color: var(--muted);
+      line-height: 1.35;
     }
 
     .final {
@@ -137,7 +131,7 @@
 </head>
 
 <body>
-  <div class="hearts" id="hearts"></div>
+  <div class="bg-emojis" id="bgEmojis"></div>
 
   <div class="container">
     <h1>Tiempo hasta...</h1>
@@ -162,7 +156,7 @@
 
     <div class="final" id="finalMsg">¡¡Llegó el momento!! ❤️</div>
 
-    <audio id="song">
+    <audio id="song" preload="auto">
       <source src="media-luna.mp3" type="audio/mpeg">
     </audio>
   </div>
@@ -170,41 +164,92 @@
   <script>
     const targetDate = new Date("2026-01-06T00:00:00").getTime();
 
-    const heartsEl = document.getElementById("hearts");
-    for (let i = 0; i < 80; i++) {
-      const h = document.createElement("div");
-      h.className = "heart-emoji";
-      h.textContent = "❤️";
-      h.style.left = Math.random() * 100 + "%";
-      h.style.top = Math.random() * 100 + "%";
-      h.style.fontSize = (14 + Math.random() * 24) + "px";
-      h.style.opacity = 0.4 + Math.random() * 0.5;
-      heartsEl.appendChild(h);
+    // 🔥 FONDO OPTIMIZADO
+    const bg = document.getElementById("bgEmojis");
+    const EMOJIS = ["❤️", "💘", "🐽", "💝"];
+    const COUNT = 28; // 👈 fluido
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
     }
 
+    function spawnEmoji() {
+      const el = document.createElement("div");
+      el.className = "emoji";
+      el.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+
+      el.style.left = rand(0, 100) + "%";
+      el.style.fontSize = rand(22, 40) + "px";
+      el.style.animationDuration = rand(8, 14) + "s";
+
+      bg.appendChild(el);
+
+      setTimeout(() => el.remove(), 15000);
+    }
+
+    // crear en oleadas (MUCHO más fluido)
+    setInterval(spawnEmoji, 600);
+
+    // Contador
     const d = document.getElementById("days");
-    const h = document.getElementById("hours");
-    const m = document.getElementById("minutes");
-    const s = document.getElementById("seconds");
+    const hh = document.getElementById("hours");
+    const mm = document.getElementById("minutes");
+    const ss = document.getElementById("seconds");
     const finalMsg = document.getElementById("finalMsg");
 
-    function pad(n) { return n < 10 ? "0" + n : n; }
+    function pad(n) { return n < 10 ? "0" + n : String(n); }
+
+    // Sonido
+    const btn = document.getElementById("enableSound");
+    const statusEl = document.getElementById("status");
+    const song = document.getElementById("song");
+
+    const statusOffText = "Activa el sonido, y cuando llegue a 0 tendrás una sorpresita jijij";
+    const statusOnText  = "Música activadaaa 🎶";
+
+    let soundEnabled = false;
+    let finished = false;
+
+    btn.addEventListener("click", async () => {
+      if (!soundEnabled) {
+        try {
+          await song.play();
+          song.pause();
+          song.currentTime = 0;
+          soundEnabled = true;
+          btn.textContent = "🔊 Música activadaaa";
+          statusEl.textContent = statusOnText;
+        } catch (e) {
+          statusEl.textContent = "No se pudo activar el sonido 😢";
+        }
+      } else {
+        soundEnabled = false;
+        btn.textContent = "🔊 Activar sonido";
+        statusEl.textContent = statusOffText;
+      }
+    });
 
     function tick() {
       const now = Date.now();
       const diff = targetDate - now;
 
       if (diff <= 0) {
-        d.textContent = h.textContent = m.textContent = s.textContent = "00";
+        d.textContent = hh.textContent = mm.textContent = ss.textContent = "00";
         finalMsg.style.display = "block";
+
+        if (!finished && soundEnabled) {
+          finished = true;
+          song.currentTime = 0;
+          song.play().catch(() => {});
+        }
         return;
       }
 
       const t = Math.floor(diff / 1000);
-      d.textContent = pad(Math.floor(t / 86400));
-      h.textContent = pad(Math.floor(t % 86400 / 3600));
-      m.textContent = pad(Math.floor(t % 3600 / 60));
-      s.textContent = pad(t % 60);
+      d.textContent  = pad(Math.floor(t / 86400));
+      hh.textContent = pad(Math.floor((t % 86400) / 3600));
+      mm.textContent = pad(Math.floor((t % 3600) / 60));
+      ss.textContent = pad(t % 60);
     }
 
     tick();
